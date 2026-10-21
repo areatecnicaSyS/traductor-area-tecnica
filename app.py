@@ -1,6 +1,6 @@
 import streamlit as st
 import speech_recognition as sr
-from deep_translator import GoogleTranslator, MyMemoryTranslator
+from deep_translator import GoogleTranslator
 from gtts import gTTS
 from pydub import AudioSegment
 import io
@@ -34,13 +34,6 @@ def verificar_password():
 if not verificar_password():
     st.stop()
 
-# --- FUNCIÓN DE TRADUCCIÓN A PRUEBA DE BLOQUEOS ---
-def traducir_texto(texto, src, dst):
-    try:
-        return GoogleTranslator(source=src, target=dst).translate(texto)
-    except Exception:
-        return MyMemoryTranslator(source=src, target=dst).translate(texto)
-
 # --- 2. INTERFAZ PRINCIPAL ---
 st.title("🎙️ Traductor en Vivo")
 st.write("Selecciona los idiomas, graba tu voz y la aplicación traducirá al instante.")
@@ -51,15 +44,13 @@ with col1:
 with col2:
     idioma_destino = st.selectbox("Idioma de traducción:", ["Inglés", "Español", "Francés", "Alemán"], index=0)
 
-# Mapeos separados para Evitar conflictos de códigos
-# 1. Códigos para SpeechRecognition (Voz)
+# Mapeos precisos para SpeechRecognition (Voz) y GoogleTranslator (Texto)
 speech_lang_map = {
     "Español": "es-ES",
     "Inglés": "en-US",
     "Francés": "fr-FR"
 }
 
-# 2. Códigos cortos de 2 letras para Traducción y gTTS
 trans_lang_map = {
     "Español": "es",
     "Inglés": "en",
@@ -99,8 +90,9 @@ if audio_bytes is not None:
             texto = recognizer.recognize_google(audio_data, language=speech_lang_src)
             
             if texto and texto.strip():
-                # Traducir usando los códigos cortos (ej. es -> en)
-                traduccion = traducir_texto(texto, lang_code_src, lang_code_dst)
+                # Traducción directa y limpia con GoogleTranslator
+                traductor = GoogleTranslator(source=lang_code_src, target=lang_code_dst)
+                traduccion = traductor.translate(texto)
                 
                 # Mostrar resultados
                 st.success(f"**Lo que dijiste:** {texto}")
