@@ -1,2 +1,6 @@
 streamlit
+streamlit-webrtc
+SpeechRecognition
 deep-translator
+gTTS
+pydub
