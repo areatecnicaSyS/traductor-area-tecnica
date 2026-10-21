@@ -1,9 +1,11 @@
 import streamlit as st
 import speech_recognition as sr
-from deep_translator import MyMemoryTranslator
 from gtts import gTTS
 from pydub import AudioSegment
 import io
+import urllib.request
+import json
+import urllib.parse
 
 st.set_page_config(page_title="Traductor en Vivo", page_icon="🎙️")
 
@@ -34,6 +36,21 @@ def verificar_password():
 if not verificar_password():
     st.stop()
 
+# --- FUNCIÓN DE TRADUCCIÓN DIRECTA Y SEGURA ---
+def traducir_texto(texto, src, dst):
+    """Realiza la traducción mediante petición web directa sin librerías intermedias."""
+    try:
+        url = f"https://api.mymemory.translated.net/get?q={urllib.parse.quote(texto)}&langpair={src}|{dst}"
+        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+        with urllib.request.urlopen(req) as response:
+            data = json.loads(response.read().decode())
+            traduccion = data.get('responseData', {}).get('translatedText')
+            if traduccion:
+                return traduccion
+        return texto
+    except Exception:
+        return texto
+
 # --- 2. INTERFAZ PRINCIPAL ---
 st.title("🎙️ Traductor en Vivo")
 st.write("Selecciona los idiomas, graba tu voz y la aplicación traducirá al instante.")
@@ -44,14 +61,13 @@ with col1:
 with col2:
     idioma_destino = st.selectbox("Idioma de traducción:", ["Inglés", "Español", "Francés", "Alemán"], index=0)
 
-# Mapeos de idiomas
+# Mapeos precisos para voz y traducción
 speech_lang_map = {
     "Español": "es-ES",
     "Inglés": "en-US",
     "Francés": "fr-FR"
 }
 
-# Códigos estándar para MyMemory y gTTS
 code_lang_map = {
     "Español": "es",
     "Inglés": "en",
@@ -91,9 +107,8 @@ if audio_bytes is not None:
             texto = recognizer.recognize_google(audio_data, language=speech_lang_src)
             
             if texto and texto.strip():
-                # Traducción estable y libre de bloqueos con MyMemoryTranslator
-                translator = MyMemoryTranslator(source=lang_code_src, target=lang_code_dst)
-                traduccion = translator.translate(texto)
+                # Traducir de forma directa y limpia
+                traduccion = traducir_texto(texto, lang_code_src, lang_code_dst)
                 
                 # Mostrar resultados
                 st.success(f"**Lo que dijiste:** {texto}")
