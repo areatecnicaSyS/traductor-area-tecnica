@@ -7,7 +7,7 @@ import urllib.request
 import json
 import urllib.parse
 
-st.set_page_config(page_title="Traductor en Vivo", page_icon="🎙️")
+st.set_page_config(page_title="Traductor en Vivo - Área Técnica", page_icon="🎙️", layout="centered")
 
 # --- 1. SISTEMA DE CONTRASEÑA ---
 PASSWORD_DEFECTO = "MiClaveSecreta123"
@@ -18,6 +18,12 @@ def verificar_password():
 
     if st.session_state["password_correcta"]:
         return True
+
+    # Logotipo en pantalla de login
+    try:
+        st.image("Logo Circular 2026.png", width=180)
+    except Exception:
+        pass
 
     st.title("🔒 Acceso Restringido")
     st.write("Ingresa la contraseña autorizada para acceder al traductor.")
@@ -51,8 +57,28 @@ def traducir_texto(texto, src, dst):
     except Exception:
         return texto
 
+# --- BARRA LATERAL CON LOGO E INFORMACIÓN ---
+with st.sidebar:
+    try:
+        st.image("Logo Circular 2026.png", use_column_width=True)
+    except Exception:
+        pass
+    st.markdown("---")
+    st.markdown("**Área Técnica**  \n*Servicios y Soluciones Tecnológicas*")
+
 # --- 2. INTERFAZ PRINCIPAL ---
-st.title("🎙️ Traductor en Vivo")
+col_logo, col_titulo = st.columns([1, 3])
+
+with col_logo:
+    try:
+        st.image("Logo Circular 2026.png", width=130)
+    except Exception:
+        pass
+
+with col_titulo:
+    st.title("🎙️ Traductor en Vivo")
+    st.caption("Área Técnica - Servicios y Soluciones Tecnológicas")
+
 st.write("Selecciona los idiomas, graba tu voz o escribe una frase para traducir al instante.")
 
 col1, col2 = st.columns(2)
@@ -81,11 +107,11 @@ lang_code_dst = code_lang_map[idioma_destino]
 
 st.write("---")
 
-# Opción 1: Entrada de texto manual (Para usuarios sin micrófono)
-texto_escrito = st.text_input("💬 O escribe tu frase aquí (si no tienes micrófono):")
+# Opción 1: Entrada de texto manual
+texto_escrito = st.text_input("💬 Escribe tu frase aquí (opcional si no usas micrófono):")
 
-# Opción 2: Componente de audio de Streamlit
-audio_bytes = st.audio_input("🎙️ O graba tu frase (habla claro y sin pausas largas):")
+# Opción 2: Componente de audio
+audio_bytes = st.audio_input("🎙️ Graba tu frase con el micrófono:")
 
 texto_a_traducir = None
 
@@ -117,14 +143,13 @@ elif audio_bytes is not None:
     except Exception as e:
         st.error(f"⚠️ Error al procesar el audio: {e}")
 
-# Si tenemos un texto válido (por voz o por escrito), realizamos la traducción y la reproducción
+# Traducción y salida de audio
 if texto_a_traducir:
     traduccion = traducir_texto(texto_a_traducir, lang_code_src, lang_code_dst)
     
     st.success(f"**Texto original:** {texto_a_traducir}")
     st.info(f"**Traducción:** {traduccion}")
     
-    # Reproducir audio traducido con gTTS
     try:
         tts = gTTS(text=traduccion, lang=lang_code_dst)
         fp = io.BytesIO()
