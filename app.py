@@ -44,13 +44,14 @@ with col1:
 with col2:
     idioma_destino = st.selectbox("Idioma de traducción:", ["Inglés", "Español", "Francés", "Alemán"], index=0)
 
-# Mapeos precisos para SpeechRecognition (Voz) y GoogleTranslator (Texto)
+# Mapeo 1: Códigos largos para SpeechRecognition (Reconocimiento de voz)
 speech_lang_map = {
     "Español": "es-ES",
     "Inglés": "en-US",
     "Francés": "fr-FR"
 }
 
+# Mapeo 2: Códigos cortos de 2 letras estrictos para deep-translator
 trans_lang_map = {
     "Español": "es",
     "Inglés": "en",
@@ -86,19 +87,19 @@ if audio_bytes is not None:
             recognizer.adjust_for_ambient_noise(source, duration=0.2)
             audio_data = recognizer.record(source)
             
-            # Reconocer voz usando el código específico (ej. es-ES)
+            # Reconocer voz usando el código específico de voz
             texto = recognizer.recognize_google(audio_data, language=speech_lang_src)
             
             if texto and texto.strip():
-                # Traducción directa y limpia con GoogleTranslator
+                # Traducción exacta con códigos cortos
                 traductor = GoogleTranslator(source=lang_code_src, target=lang_code_dst)
                 traduccion = traductor.translate(texto)
                 
-                # Mostrar resultados
+                # Mostrar resultados limpios
                 st.success(f"**Lo que dijiste:** {texto}")
                 st.info(f"**Traducción:** {traduccion}")
                 
-                # Reproducir audio traducido
+                # Reproducir audio traducido con gTTS
                 tts = gTTS(text=traduccion, lang=lang_code_dst)
                 fp = io.BytesIO()
                 tts.write_to_fp(fp)
