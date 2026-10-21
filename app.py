@@ -1,6 +1,6 @@
 import streamlit as st
 import speech_recognition as sr
-from googletrans import Translator
+from deep_translator import MyMemoryTranslator
 from gtts import gTTS
 from pydub import AudioSegment
 import io
@@ -44,13 +44,14 @@ with col1:
 with col2:
     idioma_destino = st.selectbox("Idioma de traducción:", ["Inglés", "Español", "Francés", "Alemán"], index=0)
 
-# Mapeos limpios y estándar
+# Mapeos de idiomas
 speech_lang_map = {
     "Español": "es-ES",
     "Inglés": "en-US",
     "Francés": "fr-FR"
 }
 
+# Códigos estándar para MyMemory y gTTS
 code_lang_map = {
     "Español": "es",
     "Inglés": "en",
@@ -86,16 +87,15 @@ if audio_bytes is not None:
             recognizer.adjust_for_ambient_noise(source, duration=0.2)
             audio_data = recognizer.record(source)
             
-            # Reconocer voz usando el código específico de voz
+            # Reconocer voz usando el código específico
             texto = recognizer.recognize_google(audio_data, language=speech_lang_src)
             
             if texto and texto.strip():
-                # Traducción ultra rápida y segura con Googletrans
-                translator = Translator()
-                traduccion_obj = translator.translate(texto, src=lang_code_src, dest=lang_code_dst)
-                traduccion = traduccion_obj.text
+                # Traducción estable y libre de bloqueos con MyMemoryTranslator
+                translator = MyMemoryTranslator(source=lang_code_src, target=lang_code_dst)
+                traduccion = translator.translate(texto)
                 
-                # Mostrar resultados limpios
+                # Mostrar resultados
                 st.success(f"**Lo que dijiste:** {texto}")
                 st.info(f"**Traducción:** {traduccion}")
                 
