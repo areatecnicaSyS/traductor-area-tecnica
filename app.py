@@ -7,7 +7,10 @@ import io
 
 st.set_page_config(page_title="Traductor en Vivo y Seguro", page_icon="🎙️")
 
-# --- SISTEMA DE CONTRASEÑA PARA SEGURIDAD ---
+# --- CONFIGURACIÓN DE CONTRASEÑA MODIFICABLE ---
+# Puedes cambiar la contraseña aquí mismo cuando quieras, o usar st.secrets en la nube.
+PASSWORD_DEFECTO = "MiClaveSecreta123"
+
 def verificar_password():
     if "password_correcta" not in st.session_state:
         st.session_state["password_correcta"] = False
@@ -16,27 +19,29 @@ def verificar_password():
         return True
 
     st.title("🔒 Acceso Restringido")
-    st.write("Ingresa la contraseña para acceder al traductor en vivo.")
+    st.write("Ingresa la contraseña autorizada para acceder al traductor en vivo.")
     
     password_ingresada = st.text_input("Contraseña:", type="password")
     
     if st.button("Ingresar"):
-        # Cambia 'TuPasswordSeguro123' por la contraseña que desees compartir con la otra persona
-        if password_ingresada == "TuPasswordSeguro123":
+        # Intenta obtener la clave de st.secrets o usa PASSWORD_DEFECTO por defecto
+        password_real = st.secrets.get("PASSWORD_APP", PASSWORD_DEFECTO)
+        
+        if password_ingresada == password_real:
             st.session_state["password_correcta"] = True
             st.rerun()
         else:
-            st.error("Contraseña incorrecta.")
-    return False
+            st.error("Contraseña incorrecta. Inténtalo de nuevo.")
+        return False
 
 if not verificar_password():
     st.stop()
 
-# --- APLICACIÓN EN VIVO ---
+# --- APLICACIÓN PRINCIPAL DE TRADUCCIÓN EN VIVO ---
 st.title("🎙️ Traductor de Voz en Vivo")
-st.write("Habla por el micrófono y transmite en tiempo real con la persona al otro lado del enlace.")
+st.write("Transmisión de audio en tiempo real y segura.")
 
-# Configuración de idiomas
+# Selección de idiomas
 col1, col2 = st.columns(2)
 with col1:
     idioma_origen = st.selectbox("Idioma que hablas:", ["es-ES", "en-US", "fr-FR", "de-DE"], index=0)
@@ -48,7 +53,7 @@ lang_code_src = idioma_origen.split("-")[0]
 st.write("---")
 st.subheader("🔴 Transmisión de Audio en Directo")
 
-# Canal de WebRTC para streaming de voz en tiempo real
+# Componente WebRTC para streaming de voz en tiempo real
 webrtc_ctx = webrtc_streamer(
     key="traductor-voz-en-vivo",
     mode=WebRtcMode.SENDONLY,
@@ -57,6 +62,6 @@ webrtc_ctx = webrtc_streamer(
 )
 
 if webrtc_ctx.state.playing:
-    st.success("🟢 Conectado y escuchando en vivo... Habla con normalidad.")
+    st.success("🟢 Conectado y escuchando en vivo...")
 else:
-    st.info("ℹ️ Haz clic en **Start** para activar el micrófono y comenzar la transmisión en vivo.")
+    st.info("ℹ️ Haz clic en **Start** para activar el micrófono e iniciar la transmisión.")
