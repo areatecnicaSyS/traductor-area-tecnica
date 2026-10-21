@@ -1,6 +1,6 @@
 import streamlit as st
 import speech_recognition as sr
-from deep_translator import GoogleTranslator
+from googletrans import Translator
 from gtts import gTTS
 from pydub import AudioSegment
 import io
@@ -44,15 +44,14 @@ with col1:
 with col2:
     idioma_destino = st.selectbox("Idioma de traducción:", ["Inglés", "Español", "Francés", "Alemán"], index=0)
 
-# Mapeo 1: Códigos largos para SpeechRecognition (Reconocimiento de voz)
+# Mapeos limpios y estándar
 speech_lang_map = {
     "Español": "es-ES",
     "Inglés": "en-US",
     "Francés": "fr-FR"
 }
 
-# Mapeo 2: Códigos cortos de 2 letras estrictos para deep-translator
-trans_lang_map = {
+code_lang_map = {
     "Español": "es",
     "Inglés": "en",
     "Francés": "fr",
@@ -60,8 +59,8 @@ trans_lang_map = {
 }
 
 speech_lang_src = speech_lang_map[idioma_origen]
-lang_code_src = trans_lang_map[idioma_origen]
-lang_code_dst = trans_lang_map[idioma_destino]
+lang_code_src = code_lang_map[idioma_origen]
+lang_code_dst = code_lang_map[idioma_destino]
 
 st.write("---")
 
@@ -91,9 +90,10 @@ if audio_bytes is not None:
             texto = recognizer.recognize_google(audio_data, language=speech_lang_src)
             
             if texto and texto.strip():
-                # Traducción exacta con códigos cortos
-                traductor = GoogleTranslator(source=lang_code_src, target=lang_code_dst)
-                traduccion = traductor.translate(texto)
+                # Traducción ultra rápida y segura con Googletrans
+                translator = Translator()
+                traduccion_obj = translator.translate(texto, src=lang_code_src, dest=lang_code_dst)
+                traduccion = traduccion_obj.text
                 
                 # Mostrar resultados limpios
                 st.success(f"**Lo que dijiste:** {texto}")
