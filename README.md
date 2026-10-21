@@ -1,0 +1,1 @@
+# traductor-area-tecnica
