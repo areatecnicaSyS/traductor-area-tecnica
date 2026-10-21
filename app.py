@@ -35,7 +35,7 @@ if not verificar_password():
 
 # --- 2. INTERFAZ PRINCIPAL ---
 st.title("🎙️ Traductor en Vivo")
-st.write("Selecciona los idiomas, graba tu voz y la aplicación traducirá y hablará en el idioma de destino.")
+st.write("Selecciona los idiomas, graba tu voz y la aplicación traducirá al instante.")
 
 col1, col2 = st.columns(2)
 with col1:
@@ -43,7 +43,7 @@ with col1:
 with col2:
     idioma_destino = st.selectbox("Idioma de traducción:", ["Inglés (en)", "Español (es)", "Francés (fr)", "Alemán (de)"], index=0)
 
-# Extraer códigos correctos para el traductor
+# Mapeo seguro de idiomas
 lang_map = {
     "Español (es-ES)": "es",
     "Inglés (en-US)": "en",
@@ -60,29 +60,34 @@ speech_lang_src = "es-ES" if "es" in lang_code_src else ("en-US" if "en" in lang
 
 st.write("---")
 
-# Grabador de audio nativo de Streamlit (compatible con celulares y PC bajo HTTPS)
-audio_bytes = st.audio_input("Graba tu voz:")
+# Componente de audio de Streamlit
+audio_bytes = st.audio_input("Graba tu frase (habla claro y sin pausas largas):")
 
 if audio_bytes is not None:
-    st.info("🔄 Procesando y traduciendo...")
+    st.info("🔄 Procesando tu voz...")
     
     try:
         recognizer = sr.Recognizer()
-        audio_file = io.BytesIO(audio_bytes.read())
+        
+        # Leer los bytes del audio grabado
+        audio_data_bytes = audio_bytes.read()
+        audio_file = io.BytesIO(audio_data_bytes)
         
         with sr.AudioFile(audio_file) as source:
+            # Ajustar automáticamente al ruido ambiental del clip
+            recognizer.adjust_for_ambient_noise(source, duration=0.2)
             audio_data = recognizer.record(source)
             
-            # Reconocer voz según el idioma que hablas
+            # Reconocimiento de voz con Google
             texto = recognizer.recognize_google(audio_data, language=speech_lang_src)
             
-            if texto:
-                # Traducir al idioma de destino seleccionado
+            if texto and texto.strip():
+                # Traducción
                 traduccion = GoogleTranslator(source=lang_code_src, target=lang_code_dst).translate(texto)
                 
-                # Mostrar resultados
-                st.success(f"**Lo que dijiste ({idioma_origen}):** {texto}")
-                st.info(f"**Traducción ({idioma_destino}):** {traduccion}")
+                # Mostrar resultados limpios
+                st.success(f"**Lo que dijiste:** {texto}")
+                st.info(f"**Traducción:** {traduccion}")
                 
                 # Generar y reproducir audio traducido
                 tts = gTTS(text=traduccion, lang=lang_code_dst)
@@ -91,8 +96,12 @@ if audio_bytes is not None:
                 fp.seek(0)
                 
                 st.audio(fp, format="audio/mp3", autoplay=True)
+            else:
+                st.warning("El audio se grabó vacío o no se detectaron palabras.")
                 
     except sr.UnknownValueError:
-        st.warning("No se pudo entender el audio. Habla claro y cerca del micrófono.")
+        st.warning("⚠️ Google no pudo entender el audio. Intenta hablar un poco más cerca del micrófono y di una frase clara.")
+    except sr.RequestError:
+        st.error("⚠️ Error de conexión con el servicio de reconocimiento de voz. Inténtalo de nuevo.")
     except Exception as e:
-        st.error(f"Error al procesar: {e}")
+        st.error(f"⚠️ Ocurrió un inconveniente con el formato de audio: {e}")
