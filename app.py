@@ -36,14 +36,9 @@ if not verificar_password():
 
 # --- FUNCIÓN DE TRADUCCIÓN A PRUEBA DE BLOQUEOS ---
 def traducir_texto(texto, src, dst):
-    """
-    Intenta traducir usando GoogleTranslator. Si alcanza el límite de peticiones,
-    usa automáticamente MyMemoryTranslator como respaldo.
-    """
     try:
         return GoogleTranslator(source=src, target=dst).translate(texto)
     except Exception:
-        # Respaldo rápido y gratuito cuando Google bloquea la IP
         return MyMemoryTranslator(source=src, target=dst).translate(texto)
 
 # --- 2. INTERFAZ PRINCIPAL ---
@@ -52,24 +47,29 @@ st.write("Selecciona los idiomas, graba tu voz y la aplicación traducirá al in
 
 col1, col2 = st.columns(2)
 with col1:
-    idioma_origen = st.selectbox("Idioma que hablas:", ["Español (es-ES)", "Inglés (en-US)", "Francés (fr-FR)"], index=0)
+    idioma_origen = st.selectbox("Idioma que hablas:", ["Español", "Inglés", "Francés"], index=0)
 with col2:
-    idioma_destino = st.selectbox("Idioma de traducción:", ["Inglés (en)", "Español (es)", "Francés (fr)", "Alemán (de)"], index=0)
+    idioma_destino = st.selectbox("Idioma de traducción:", ["Inglés", "Español", "Francés", "Alemán"], index=0)
 
-# Mapeo seguro de idiomas
-lang_map = {
-    "Español (es-ES)": "es",
-    "Inglés (en-US)": "en",
-    "Francés (fr-FR)": "fr",
-    "Inglés (en)": "en",
-    "Español (es)": "es",
-    "Francés (fr)": "fr",
-    "Alemán (de)": "de"
+# Mapeos separados para Evitar conflictos de códigos
+# 1. Códigos para SpeechRecognition (Voz)
+speech_lang_map = {
+    "Español": "es-ES",
+    "Inglés": "en-US",
+    "Francés": "fr-FR"
 }
 
-lang_code_src = lang_map[idioma_origen]
-lang_code_dst = lang_map[idioma_destino]
-speech_lang_src = "es-ES" if "es" in lang_code_src else ("en-US" if "en" in lang_code_src else "fr-FR")
+# 2. Códigos cortos de 2 letras para Traducción y gTTS
+trans_lang_map = {
+    "Español": "es",
+    "Inglés": "en",
+    "Francés": "fr",
+    "Alemán": "de"
+}
+
+speech_lang_src = speech_lang_map[idioma_origen]
+lang_code_src = trans_lang_map[idioma_origen]
+lang_code_dst = trans_lang_map[idioma_destino]
 
 st.write("---")
 
@@ -80,7 +80,7 @@ if audio_bytes is not None:
     st.info("🔄 Procesando tu voz...")
     
     try:
-        # Convertir WebM/OGG a WAV PCM en memoria
+        # Convertir WebM/OGG a WAV PCM en memoria con Pydub
         audio_bytes_data = audio_bytes.read()
         audio_segment = AudioSegment.from_file(io.BytesIO(audio_bytes_data))
         
@@ -95,10 +95,11 @@ if audio_bytes is not None:
             recognizer.adjust_for_ambient_noise(source, duration=0.2)
             audio_data = recognizer.record(source)
             
+            # Reconocer voz usando el código específico (ej. es-ES)
             texto = recognizer.recognize_google(audio_data, language=speech_lang_src)
             
             if texto and texto.strip():
-                # Traducción segura
+                # Traducir usando los códigos cortos (ej. es -> en)
                 traduccion = traducir_texto(texto, lang_code_src, lang_code_dst)
                 
                 # Mostrar resultados
