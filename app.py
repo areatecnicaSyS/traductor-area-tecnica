@@ -53,11 +53,11 @@ def traducir_texto(texto, src, dst):
 
 # --- 2. INTERFAZ PRINCIPAL ---
 st.title("🎙️ Traductor en Vivo")
-st.write("Selecciona los idiomas, graba tu voz y la aplicación traducirá al instante.")
+st.write("Selecciona los idiomas, graba tu voz o escribe una frase para traducir al instante.")
 
 col1, col2 = st.columns(2)
 with col1:
-    idioma_origen = st.selectbox("Idioma que hablas:", ["Español", "Inglés", "Francés"], index=0)
+    idioma_origen = st.selectbox("Idioma de origen:", ["Español", "Inglés", "Francés"], index=0)
 with col2:
     idioma_destino = st.selectbox("Idioma de traducción:", ["Inglés", "Español", "Francés", "Alemán"], index=0)
 
@@ -81,14 +81,22 @@ lang_code_dst = code_lang_map[idioma_destino]
 
 st.write("---")
 
-# Componente de audio de Streamlit
-audio_bytes = st.audio_input("Graba tu frase (habla claro y sin pausas largas):")
+# Opción 1: Entrada de texto manual (Para usuarios sin micrófono)
+texto_escrito = st.text_input("💬 O escribe tu frase aquí (si no tienes micrófono):")
 
-if audio_bytes is not None:
+# Opción 2: Componente de audio de Streamlit
+audio_bytes = st.audio_input("🎙️ O graba tu frase (habla claro y sin pausas largas):")
+
+texto_a_traducir = None
+
+# Procesar si el usuario escribió texto
+if texto_escrito and texto_escrito.strip():
+    texto_a_traducir = texto_escrito.strip()
+
+# Procesar si el usuario grabó audio
+elif audio_bytes is not None:
     st.info("🔄 Procesando tu voz...")
-    
     try:
-        # Convertir WebM/OGG a WAV PCM en memoria con Pydub
         audio_bytes_data = audio_bytes.read()
         audio_segment = AudioSegment.from_file(io.BytesIO(audio_bytes_data))
         
@@ -96,37 +104,32 @@ if audio_bytes is not None:
         audio_segment.export(wav_io, format="wav")
         wav_io.seek(0)
         
-        # Reconocimiento de voz
         recognizer = sr.Recognizer()
-        
         with sr.AudioFile(wav_io) as source:
             recognizer.adjust_for_ambient_noise(source, duration=0.2)
             audio_data = recognizer.record(source)
+            texto_a_traducir = recognizer.recognize_google(audio_data, language=speech_lang_src)
             
-            # Reconocer voz usando el código específico
-            texto = recognizer.recognize_google(audio_data, language=speech_lang_src)
-            
-            if texto and texto.strip():
-                # Traducir de forma directa y limpia
-                traduccion = traducir_texto(texto, lang_code_src, lang_code_dst)
-                
-                # Mostrar resultados
-                st.success(f"**Lo que dijiste:** {texto}")
-                st.info(f"**Traducción:** {traduccion}")
-                
-                # Reproducir audio traducido con gTTS
-                tts = gTTS(text=traduccion, lang=lang_code_dst)
-                fp = io.BytesIO()
-                tts.write_to_fp(fp)
-                fp.seek(0)
-                
-                st.audio(fp, format="audio/mp3", autoplay=True)
-            else:
-                st.warning("El audio se grabó vacío o no se detectaron palabras.")
-                
     except sr.UnknownValueError:
-        st.warning("⚠️ No se pudo entender el audio. Habla más cerca del micrófono e inténtalo de nuevo.")
+        st.warning("⚠️ No se pudo entender el audio. Habla más cerca del micrófono o escribe el texto.")
     except sr.RequestError:
-        st.error("⚠️ Error de conexión con el servicio de voz. Inténtalo de nuevo.")
+        st.error("⚠️ Error de conexión con el servicio de voz.")
     except Exception as e:
-        st.error(f"⚠️ Error al procesar: {e}")
+        st.error(f"⚠️ Error al procesar el audio: {e}")
+
+# Si tenemos un texto válido (por voz o por escrito), realizamos la traducción y la reproducción
+if texto_a_traducir:
+    traduccion = traducir_texto(texto_a_traducir, lang_code_src, lang_code_dst)
+    
+    st.success(f"**Texto original:** {texto_a_traducir}")
+    st.info(f"**Traducción:** {traduccion}")
+    
+    # Reproducir audio traducido con gTTS
+    try:
+        tts = gTTS(text=traduccion, lang=lang_code_dst)
+        fp = io.BytesIO()
+        tts.write_to_fp(fp)
+        fp.seek(0)
+        st.audio(fp, format="audio/mp3", autoplay=True)
+    except Exception as e:
+        st.error(f"⚠️ No se pudo generar el audio de salida: {e}")
