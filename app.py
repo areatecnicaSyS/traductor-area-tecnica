@@ -38,7 +38,7 @@ if not verificar_password():
 
 # --- 2. INTERFAZ PRINCIPAL ---
 st.title("🎙️ Traductor Total de Voz en Vivo")
-st.write("Habla por el micrófono: se transcribirá, se traducirá y se reproducirá en audio en tiempo real.")
+st.write("Habla por el micrófono: se transcribirá, se traducirá y aparecerá el reproductor de audio.")
 
 col1, col2 = st.columns(2)
 with col1:
@@ -51,9 +51,17 @@ lang_code_src = idioma_origen.split("-")[0]
 st.write("---")
 st.subheader("📝 Resultados y Audio")
 
+# Contenedores para almacenar el estado en la sesión de Streamlit
+if "texto_original" not in st.session_state:
+    st.session_state["texto_original"] = "Esperando audio..."
+if "texto_traducido" not in st.session_state:
+    st.session_state["texto_traducido"] = "..."
+if "audio_bytes" not in st.session_state:
+    st.session_state["audio_bytes"] = None
+
 caja_texto_original = st.empty()
 caja_texto_traducido = st.empty()
-caja_audio_reproductor = st.empty()
+caja_audio = st.empty()
 
 # --- 3. PROCESADOR DE AUDIO EN TIEMPO REAL ---
 class AudioProcessor(AudioProcessorBase):
@@ -67,31 +75,25 @@ class AudioProcessor(AudioProcessorBase):
         with self.lock:
             self.audio_buffer.extend(sound.tobytes())
             
-            # Acumula aprox. 2 segundos de audio para procesarlo
+            # Acumula aprox. 2 segundos de audio
             if len(self.audio_buffer) > 16000 * 4:
                 audio_data = sr.AudioData(bytes(self.audio_buffer), frame.sample_rate, 2)
                 self.audio_buffer.clear()
                 
                 try:
-                    # Transcripción
                     texto = self.recognizer.recognize_google(audio_data, language=idioma_origen)
                     if texto:
-                        # Traducción
                         traduccion = GoogleTranslator(source=lang_code_src, target=idioma_destino).translate(texto)
                         
-                        # Mostrar texto en pantalla
-                        caja_texto_original.success(f"**Texto detectado ({idioma_origen}):** {texto}")
-                        caja_texto_traducido.info(f"**Traducción ({idioma_destino}):** {traduccion}")
+                        # Guardamos en session_state para actualizar la interfaz
+                        st.session_state["texto_original"] = texto
+                        st.session_state["texto_traducido"] = traduccion
                         
-                        # Generar audio de la traducción (gTTS)
+                        # Generar audio con gTTS
                         tts = gTTS(text=traduccion, lang=idioma_destino)
                         fp = io.BytesIO()
                         tts.write_to_fp(fp)
-                        fp.seek(0)
-                        
-                        # Reproducir audio automáticamente en la interfaz
-                        with caja_audio_reproductor.container():
-                            st.audio(fp, format="audio/mp3", autoplay=True)
+                        st.session_state["audio_bytes"] = fp.getvalue()
                             
                 except Exception:
                     pass
@@ -107,7 +109,14 @@ webrtc_ctx = webrtc_streamer(
     media_stream_constraints={"video": False, "audio": True},
 )
 
+# Mostrar resultados actualizados en pantalla
+caja_texto_original.success(f"**Texto detectado:** {st.session_state['texto_original']}")
+caja_texto_traducido.info(f"**Traducción:** {st.session_state['texto_traducido']}")
+
+if st.session_state["audio_bytes"]:
+    caja_audio.audio(st.session_state["audio_bytes"], format="audio/mp3")
+
 if webrtc_ctx.state.playing:
-    st.success("🔴 Conectado: Habla por el micrófono para traducir en vivo...")
+    st.markdown("🔴 **Conectado:** Habla por el micrófono...")
 else:
-    caja_texto_original.info("ℹ️ Haz clic en **Start** para activar el micrófono.")
+    st.info("ℹ️ Haz clic en **Start** para activar el micrófono.")
